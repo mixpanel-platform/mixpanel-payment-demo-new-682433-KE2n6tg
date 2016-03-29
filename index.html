@@ -5,11 +5,127 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.mxpnl.com/libs/mixpanel-platform/css/reset.css">
     <link rel="stylesheet" type="text/css" href="https://cdn.mxpnl.com/libs/mixpanel-platform/build/mixpanel-platform.v0.latest.min.css">
     <script src="https://cdn.mxpnl.com/libs/mixpanel-platform/build/mixpanel-platform.v0.latest.min.js"></script>
+    <style>
+      table, td {
+          border: 1px solid black;
+      }
+      #peopleTable{
+        font-size: 17px;
+      }
+      th, td {
+        padding: 7px;
+        cursor:pointer;
+      }
+      table#peopleTable tr:nth-child(even) {
+        background-color: #eee;
+      }
+      table#peopleTable tr:nth-child(odd) {
+        background-color: #fff;
+      }
+      .propertyRow{
+        font-size: 13px;
+      }
+      .propertiesHeader1 {
+        font-weight:bold;
+        font-size: 15px;
+        line-height:35px;
+      }
+      .propertiesHeader {
+        font-weight:bold;
+      }
+    </style>
   </head>
   <body class="mixpanel-platform-body">
-    <h1>Hello, World!</h1>
-    <script>
-      // Run queries and display results here
-    </script>
+    <div class="mixpanel-platform-section">
+      <div style="clear: both;"></div>
+              <p style="font-size: 13px; color: rgb(95,105,131)">Please enter customer ID list:</p>
+      <form id="property" style="margin-bottom: 15px; height: 31px">
+        <input type="text" autofocus placeholder="Customer IDs" name="customerIDs" id="customerIDs" value="" style="color: rgb(95,105,131); height: 30px; width: 500px; padding: 0 4px; font-size: 12px; border: 1px solid rgb(201,209,219)">
+        <input type="button" name="submitButton" id="submitButton" onclick="runQuery()" value="Get People" style="font-weight: bold; color: rgb(95,105,131); font-size: 12px; height: 31px; padding: 0 10px; margin-left: 10px; border: 1px solid rgb(201,209,219); background-color: rgb(242,244,246)"><br clear="all" /><br clear="all" />
+        
+      </form><br clear="all" /><br clear="all" />
+      <div id="mainOutput">
+        <table id="peopleTable" border="1" style="width:100%"></table>
+      </div>
+    </div>
+<script type="text/javascript">
+
+
+// Query
+function runQuery(){
+  
+  // Get and process inputs 
+  var customerIdString = $('#customerIDs').val();
+  var customerIds = customerIdString.split(',');;
+  var whereClause = buildWhereClause(customerIds);
+  
+  // Get table and delete any current rows 
+  var table = document.getElementById("peopleTable");
+  while(table.rows.length > 0) {
+    table.deleteRow(0);
+  }
+
+  if(whereClause != "BLANKINPUT"){
+    // Mixpanel API query and callback 
+    MP.api.people({where:whereClause}).done(function(results) {
+      
+      // Log raw results
+      console.log(results.values().results);
+      
+      // Organize and go through each profile
+      var rowNum = 0;
+      if(results.values().results.length == 0) {
+        alert('No results');
+      }
+      for(var i = 0; i < results.values().total; i++){
+        // CustomerId and prof link and event time row
+        var row = table.insertRow(rowNum);
+        row.id = "eventRow"+i;
+        row.className = "eventRow";
+        var cell1 = row.insertCell(0);
+        var cell2 = row.insertCell(1);
+        cell1.innerHTML = "Customer ID"
+        cell2.innerHTML = '<a href="https://mixpanel.com/report/885609/explore/#user?distinct_id='+results.values().results[i]['$distinct_id']+'" target="_blank">'+results.values().results[i]["$properties"]["customerId"]+'</a>';
+        rowNum++;
+        
+        // People Properties
+        var row2 = table.insertRow(rowNum);
+        row2.id="propertyRow"+i;
+        row2.className = "propertyRow";
+        var cell3 = row2.insertCell(0);
+        cell3.colSpan = "2";
+        var propertiesHTML = "<span class='propertiesHeader1'>Properties:</span><br />";
+        for (var property in results.values().results[i]["$properties"]) {
+          if (results.values().results[i]["$properties"].hasOwnProperty(property)) {
+              propertiesHTML += "<span class='propertiesHeader'>"+property+":</span> "+results.values().results[i]["$properties"][property]+", &nbsp;"
+          }
+        }
+        cell3.innerHTML = propertiesHTML;
+        rowNum++;
+        
+      }
+    });
+  }
+}
+
+// Build 'where' string
+function buildWhereClause(customerIDs){
+  if(customerIDs.length == 1 && customerIDs[0] == ""){
+    return "BLANKINPUT";
+  }
+  whereClause = ""
+  for(var i = 0; i < customerIDs.length; i++){
+    if(i == customerIDs.length-1){
+      whereClause += 'properties["customerId"] == "'+customerIDs[i].trim()+'"';
+    }
+    else{
+      whereClause += 'properties["customerId"] == "'+customerIDs[i].trim()+'" or ';
+    }
+  }
+  return whereClause;
+}
+
+
+</script>
   </body>
 </html>
